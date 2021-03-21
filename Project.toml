@@ -1,7 +1,7 @@
 name = "EnvironmentRestore"
 uuid = "e4921781-4fcb-4e7e-b565-82aacba3092b"
 authors = ["Nick Dewaele <nick.dewaele@kuleuven.be> and contributors"]
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"

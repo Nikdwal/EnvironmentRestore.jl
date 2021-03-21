@@ -1,41 +1,56 @@
 module EnvironmentRestore
 
-    using TOML
-    export verify_uuid, restore_commit!, @useRestored
+    export archiveEnvironment, restoreEnvironment
+    using Pkg
 
-    repo      = chomp(String(read(`git rev-parse --show-toplevel`)))
-    toml_file = joinpath(repo, "Project.toml")
-    pkg_info  = TOML.parsefile(toml_file)
+    """
+        archiveEnvironment(packages :: Pair{String, String}...)
+    
+    Creates a Julia environment that can use your package at a specific commit.
 
-    Base.active_project() == toml_file || @warn "Environment is not set up to " * pkg_info["name"] * ". Start Julia with \" julia --project="*repo*"\"."
+    Arguments:
+    - `packages`: specified in the form `path1 => commitHash1, path2 => commitHash2, ...` where the paths are the file paths to your repositories.
 
-    function verify_uuid(uuid)
-        uuid == pkg_info["uuid"]
-    end
-
-    function restore_commit!(commit)
-        cur_commit = chomp(String(read(`git rev-parse HEAD`)))
-        if cur_commit == commit
-            println("Already on commit ", commit)
-        else
-            printstyled("┌-- Restoring commit ", "-"^20, "\n| ", bold=true, color=:green)
-            printstyled("Current HEAD: ", bold=true, color=:magenta)
-            write(stdout, read(`git log --oneline -n 1`))
-            printstyled("| ", bold=true, color=:green)
-            printstyled("Restoring to: ", bold=true, color=:magenta)
-            write(stdout, read(Cmd(["git", "log", "--oneline", "-n", "1", commit])))
-            printstyled("└", "-"^40, "\n", bold=true, color=:green)
-            run(Cmd(["git", "checkout", "--quiet", commit]))
+    Keyword arguments are 
+    - `dir :: String`: the directory in which to store the environment
+    - `force :: Bool`: whether or not any existing environment should be overwritten
+    """
+    function archiveEnvironment(packages :: Pair{String, String}... ;dir=pwd(), force=false)
+        projectFiles = ["Project.toml", "Manifest.toml"]
+        if !force && !isempty(intersect(readdir(dir), projectFiles))
+           print("Directory already contains Julia project files.\nRun with keyword argument ")
+           printstyled("force = true", color=:cyan)
+           println(" to overwrite.")
+           return
         end
-    end    
 
-    macro useRestored(expr)
-        expr.args[1] == :(:) || error("Cannot parse expression.")
-        pkg = expr.args[2]
-        String(pkg) == pkg_info["name"] || error("Cannot restore a package other than "*pkg_info["name"])
-        commit = String(expr.args[3])
-        restore_commit!(commit)
-        :(using $pkg)
+        # Start from a copy of the default environment (normally ~/.julia/environments/vX.Y)
+        env = dirname(Base.active_project())
+        for projFile ∈ projectFiles
+            cp(joinpath(env, projFile), joinpath(dir, projFile); force=true)
+        end
+
+        # Add packages to the new environment
+        try
+            Pkg.activate(dir)
+            for (path, commit) ∈ packages
+                Pkg.add(path=path, rev=commit) 
+            end
+        catch e
+            printstyled(stderr, "\nERROR: ", bold=true, color=:red)
+            println("Modifying the new environment " * dir * " caused the following error: ")
+            throw(e)
+        finally
+            Pkg.activate(env)
+        end
+
+        printstyled(" Successfully archived ", bold=true, color=:green)
+        println("environment in ", joinpath(dir, "Manifest.toml"), ".")
     end
+
+    """
+        restoreEnvironment(dir=pwd()) = Pkg.activate(dir)
+    """
+    restoreEnvironment(dir=pwd()) = Pkg.activate(dir)
 
 end
