@@ -3,6 +3,18 @@ module EnvironmentRestore
     export archiveEnvironment, restoreEnvironment
     using Pkg
 
+    """
+        archiveEnvironment(packages :: Pair{String, String}...)
+    
+    Creates a Julia environment that can use your package at a specific commit.
+
+    Arguments:
+    - `packages`: specified in the form `path1 => commitHash1, path2 => commitHash2, ...` where the paths are the file paths to your repositories.
+
+    Keyword arguments are 
+    - `dir :: String`: the directory in which to store the environment
+    - `force :: Bool`: whether or not any existing environment should be overwritten
+    """
     function archiveEnvironment(packages :: Pair{String, String}... ;dir=pwd(), force=false)
         projectFiles = ["Project.toml", "Manifest.toml"]
         if !force && !isempty(intersect(readdir(dir), projectFiles))
@@ -36,6 +48,9 @@ module EnvironmentRestore
         println("environment in ", joinpath(dir, "Manifest.toml"), ".")
     end
 
+    """
+        restoreEnvironment(dir=pwd()) = Pkg.activate(dir)
+    """
     restoreEnvironment(dir=pwd()) = Pkg.activate(dir)
 
 end
