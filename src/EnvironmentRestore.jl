@@ -49,8 +49,13 @@ module EnvironmentRestore
     end
 
     """
-        restoreEnvironment(dir=pwd()) = Pkg.activate(dir)
+        restoreEnvironment(dir=pwd())
+
+    Restore the environment to the specified directory.
     """
-    restoreEnvironment(dir=pwd()) = Pkg.activate(dir)
+    function restoreEnvironment(dir=pwd())
+        Pkg.activate(dir)
+        Pkg.instantiate(verbose=true)
+    end
 
 end
