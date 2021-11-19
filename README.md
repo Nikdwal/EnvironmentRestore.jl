@@ -10,3 +10,5 @@ Optional keyword arguments are
 - `force :: Bool`: whether or not any existing environment should be overwritten
 
 `restoreEnvironment` Restores the archived environment, with the directory as an optional argument. The environment will only be active during the current Julia session.
+
+You can also enforce that the current working directory is on a specific commit and there are no untracked changes. This can be done with the commands `requireGitCommit(commit; strict=true)` and `requireCleanWorkingTree(;strict=true)`.
